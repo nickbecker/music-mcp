@@ -80,21 +80,16 @@ Add to your `claude_desktop_config.json`:
 
 ### Available Tools
 
-#### Search and Discovery
-- `search_spotify`: Search for music content
-- `get_item_details`: Get detailed information about tracks, albums, artists, or playlists
+#### ✅ Working Tools (Public Data Access)
+- **`search_spotify`**: Search for tracks, albums, artists, and playlists in Spotify's catalog
+- **`get_item_details`**: Get detailed information about any public Spotify item (track, album, artist, playlist)
 
-#### Playback Control
-- `get_current_track`: Get currently playing track information
-- `get_playback_state`: Get detailed playback state
-- `control_playback`: Play, pause, skip tracks
-- `set_volume`: Control playback volume
-- `set_shuffle`: Enable/disable shuffle mode
-- `set_repeat`: Set repeat mode (off, track, context)
-
-#### Queue and Device Management
-- `manage_queue`: Add tracks to queue or get current queue
-- `get_devices`: List available Spotify devices
+#### ❌ Removed Tools (Require User Authentication)
+These tools have been removed because they require user authentication which is not supported with Client Credentials flow:
+- Playback control tools (play, pause, skip, volume, shuffle, repeat)
+- Queue management tools
+- Device management tools
+- Current playback status tools
 
 ### Development Commands
 
@@ -106,21 +101,35 @@ npm run lint       # Lint code
 npm run typecheck  # Type checking
 ```
 
-### Authentication
+### Authentication & Limitations
 
-This server uses Spotify's Client Credentials flow for authentication, which provides access to:
-- Search functionality
-- Track/album/artist/playlist information
-- Playback control (requires Spotify Premium)
+**IMPORTANT**: This server currently uses Spotify's Client Credentials flow, which **only supports public data access**. 
 
-Note: User authentication flow is not implemented, so some user-specific features may not be available.
+### ✅ Available Features:
+- **Search**: Search for tracks, albums, artists, and playlists
+- **Public Information**: Get detailed information about any public Spotify content
+
+### ❌ NOT Available (Requires User Authentication):
+- Playback control (play, pause, skip, volume)
+- Queue management
+- Device management
+- User-specific data (currently playing, playlists, etc.)
+
+### Why These Limitations Exist:
+Spotify's Client Credentials flow is designed for accessing **public catalog data only**. User playback control requires **Authorization Code flow** with user consent, which is more complex to implement securely in an MCP context.
+
+### Future Improvements:
+To support playback control, this server would need:
+1. OAuth2 Authorization Code flow implementation
+2. Secure token storage and refresh mechanism
+3. User consent flow for required scopes
 
 ### Troubleshooting
 
-1. **No devices available**: Make sure Spotify is open on at least one device
-2. **Playback control fails**: Ensure you have Spotify Premium
-3. **Authentication errors**: Verify your client credentials are correct
-4. **Build errors**: Make sure you're using Node.js 18+
+1. **"User authentication required" errors**: This is expected behavior for playback controls. See limitations above.
+2. **Search fails**: Verify your client credentials are correct
+3. **Build errors**: Make sure you're using Node.js 18+
+4. **No search results**: Check your search query and ensure you have a valid internet connection
 
 ## License
 
