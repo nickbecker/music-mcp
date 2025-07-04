@@ -16,3 +16,7 @@ yarn-error.log*
 *~
 mcp_config.json
 .env.*.local
+
+# Spotify MCP authentication files
+.spotify-mcp-tokens.json
+.spotify-mcp-temp.json
