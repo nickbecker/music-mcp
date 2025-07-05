@@ -160,7 +160,7 @@ export class SpotifyAuth {
   clearTokens(): void {
     try {
       if (existsSync(this.tokenPath)) {
-        writeFileSync(this.tokenPath, '');
+        writeFileSync(this.tokenPath, 'null', { mode: 0o600 });
       }
     } catch (error) {
       console.error('Failed to clear tokens:', error);
@@ -182,8 +182,11 @@ export class SpotifyAuth {
         return null;
       }
       
-      const data = readFileSync(this.tokenPath, 'utf8');
-      return data ? JSON.parse(data) : null;
+      const data = readFileSync(this.tokenPath, 'utf8').trim();
+      if (!data || data === 'null') {
+        return null;
+      }
+      return JSON.parse(data);
     } catch (error) {
       console.error('Failed to load tokens:', error);
       return null;

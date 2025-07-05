@@ -14,6 +14,91 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { URL } from 'url';
 
+// Helper function to simplify Spotify API responses
+function simplifySpotifyResponse(data: any): any {
+  if (!data) return data;
+
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => simplifySpotifyResponse(item));
+  }
+
+  // Handle objects
+  if (typeof data === 'object') {
+    const simplified: any = {};
+
+    // Core fields to keep
+    const keepFields = [
+      'id', 'name', 'type', 'uri', 'href',
+      'display_name', 'email', 'country', 'product', 'followers',
+      'duration_ms', 'explicit', 'popularity', 'track_number',
+      'is_playing', 'progress_ms', 'shuffle_state', 'repeat_state',
+      'volume_percent', 'is_active', 'device_id', 'device_type',
+      'played_at', 'context', 'items', 'total', 'limit', 'offset'
+    ];
+
+    // Copy keep fields
+    for (const field of keepFields) {
+      if (data[field] !== undefined) {
+        simplified[field] = simplifySpotifyResponse(data[field]);
+      }
+    }
+
+    // Simplify specific object types
+    if (data.artists) {
+      simplified.artists = data.artists.map((artist: any) => ({
+        id: artist.id,
+        name: artist.name,
+        type: artist.type,
+        uri: artist.uri
+      }));
+    }
+
+    if (data.album) {
+      simplified.album = {
+        id: data.album.id,
+        name: data.album.name,
+        type: data.album.type,
+        uri: data.album.uri,
+        release_date: data.album.release_date,
+        artists: data.album.artists?.map((artist: any) => ({
+          id: artist.id,
+          name: artist.name
+        }))
+      };
+    }
+
+    if (data.track) {
+      simplified.track = simplifySpotifyResponse(data.track);
+    }
+
+    if (data.item) {
+      simplified.item = simplifySpotifyResponse(data.item);
+    }
+
+    // Keep only one image (medium resolution preferred)
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+      const preferredImage = data.images.find((img: any) => img.width >= 300 && img.width <= 640) || data.images[0];
+      simplified.image = {
+        url: preferredImage.url,
+        width: preferredImage.width,
+        height: preferredImage.height
+      };
+    }
+
+    // Remove verbose fields
+    const removeFields = [
+      'available_markets', 'external_urls', 'external_ids', 
+      'preview_url', 'disc_number', 'is_local', 'restrictions',
+      'copyrights', 'genres', 'label', 'tracks'
+    ];
+
+    return simplified;
+  }
+
+  return data;
+}
+
 // Load environment variables
 dotenv.config();
 
@@ -454,12 +539,13 @@ export class SpotifyMCPServer {
   private async handleSearch(args: any): Promise<CallToolResult> {
     const { query, types = ['track'], limit = 10 } = args;
     const results = await this.spotifyClient.search(query, types, limit);
+    const simplified = simplifySpotifyResponse(results);
     
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(results, null, 2),
+          text: JSON.stringify(simplified, null, 2),
         } as TextContent,
       ],
     };
@@ -476,7 +562,19 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: `Please visit this URL to authorize Spotify access:\n\n${authUrl}\n\nAfter authorization, you'll be redirected to localhost:8888. The authorization will be automatically processed.`,
+          text: `🎵 **SPOTIFY AUTHORIZATION REQUIRED** 🎵
+
+📋 **INSTRUCTIONS:**
+1. Copy the URL below
+2. Paste it into your web browser  
+3. Log in with your Spotify account
+4. Authorize the application
+5. You'll be redirected to localhost:8888 (callback will be handled automatically)
+
+🔗 **AUTHORIZATION URL:**
+${authUrl}
+
+⏱️  **Note:** The callback server will timeout after 5 minutes if no response is received.`,
         } as TextContent,
       ],
     };
@@ -529,11 +627,13 @@ export class SpotifyMCPServer {
         throw new Error(`Unknown item type: ${type}`);
     }
     
+    const simplified = simplifySpotifyResponse(details);
+    
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(details, null, 2),
+          text: JSON.stringify(simplified, null, 2),
         } as TextContent,
       ],
     };
@@ -546,7 +646,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: currentTrack ? JSON.stringify(currentTrack, null, 2) : 'No track currently playing',
+          text: currentTrack ? JSON.stringify(simplifySpotifyResponse(currentTrack), null, 2) : 'No track currently playing',
         } as TextContent,
       ],
     };
@@ -559,7 +659,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: playbackState ? JSON.stringify(playbackState, null, 2) : 'No active playback session',
+          text: playbackState ? JSON.stringify(simplifySpotifyResponse(playbackState), null, 2) : 'No active playback session',
         } as TextContent,
       ],
     };
@@ -656,7 +756,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(queue, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(queue), null, 2),
         } as TextContent,
       ],
     };
@@ -669,7 +769,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(devices, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(devices), null, 2),
         } as TextContent,
       ],
     };
@@ -683,7 +783,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(recentlyPlayed, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(recentlyPlayed), null, 2),
         } as TextContent,
       ],
     };
@@ -697,7 +797,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(topTracks, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(topTracks), null, 2),
         } as TextContent,
       ],
     };
@@ -711,7 +811,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(topArtists, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(topArtists), null, 2),
         } as TextContent,
       ],
     };
@@ -725,7 +825,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(playlists, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(playlists), null, 2),
         } as TextContent,
       ],
     };
@@ -739,7 +839,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(savedTracks, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(savedTracks), null, 2),
         } as TextContent,
       ],
     };
@@ -753,7 +853,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(savedAlbums, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(savedAlbums), null, 2),
         } as TextContent,
       ],
     };
@@ -766,7 +866,7 @@ export class SpotifyMCPServer {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(userProfile, null, 2),
+          text: JSON.stringify(simplifySpotifyResponse(userProfile), null, 2),
         } as TextContent,
       ],
     };

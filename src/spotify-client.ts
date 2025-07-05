@@ -26,7 +26,9 @@ export class SpotifyClient {
       try {
         const token = await this.auth.getValidAccessToken();
         config.headers.Authorization = `Bearer ${token}`;
+        console.error(`Making API request to ${config.url} with token: ${token.substring(0, 20)}...`);
       } catch (error) {
+        console.error(`Authentication failed for ${config.url}:`, error);
         throw new Error(`Authentication required: ${error instanceof Error ? error.message : 'Unknown auth error'}`);
       }
       return config;
@@ -75,6 +77,11 @@ export class SpotifyClient {
         return null; // No track playing
       }
       console.error('Failed to get current track:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || error.message;
+        throw new Error(`Failed to get current track (${status}): ${message}`);
+      }
       throw new Error('Failed to get current track');
     }
   }
@@ -88,6 +95,11 @@ export class SpotifyClient {
         return null;
       }
       console.error('Failed to get playback state:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || error.message;
+        throw new Error(`Failed to get playback state (${status}): ${message}`);
+      }
       throw new Error('Failed to get playback state');
     }
   }
@@ -170,6 +182,11 @@ export class SpotifyClient {
       return response.data.devices || [];
     } catch (error) {
       console.error('Failed to get devices:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || error.message;
+        throw new Error(`Failed to get devices (${status}): ${message}`);
+      }
       throw new Error('Failed to get devices');
     }
   }
@@ -262,6 +279,11 @@ export class SpotifyClient {
       return response.data;
     } catch (error) {
       console.error('Failed to get recently played:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || error.message;
+        throw new Error(`Failed to get recently played tracks (${status}): ${message}`);
+      }
       throw new Error('Failed to get recently played tracks');
     }
   }
@@ -332,6 +354,11 @@ export class SpotifyClient {
       return response.data;
     } catch (error) {
       console.error('Failed to get user profile:', error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || error.message;
+        throw new Error(`Failed to get user profile (${status}): ${message}`);
+      }
       throw new Error('Failed to get user profile');
     }
   }
